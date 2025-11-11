@@ -62,18 +62,18 @@ export default function Page() {
         {reportTypes.map((label) => {
           const isSelected = selectedReport === label;
           return (
-            <button
-              key={label}
-              onClick={() => handleSelect(label)}
-              className={`rounded-xl border px-4 py-2 text-sm transition-all
-                ${
-                  isSelected
-                    ? "bg-brand.purple text-white border-brand.purple"
-                    : "bg-zinc-900/60 border-white/10 hover:bg-zinc-900"
-                }`}
-            >
-              {label}
-            </button>
+          <button
+            key={label}
+            onClick={() => handleSelect(label)}
+            className={`rounded-xl border px-4 py-2 text-sm transition-all
+              ${
+                isSelected
+                  ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                  : "bg-zinc-900/60 border-white/10 hover:bg-blue-400"
+              }`}
+          >
+            {label}
+          </button>
           );
         })}
       </div>
@@ -81,7 +81,7 @@ export default function Page() {
       <h2 className="mt-8 mb-3 text-sm text-zinc-300">My Reports</h2>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 1 }).map((_, i) => (
           <ReportCard key={i} />
         ))}
       </div>

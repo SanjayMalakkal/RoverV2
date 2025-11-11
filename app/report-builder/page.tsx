@@ -2,14 +2,13 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, X } from "lucide-react";
 
 const steps = [
   "Report Info",
   "Sections",
   "Add Reference",
   "Report Style",
-  "Translations",
   "Review",
 ];
 
@@ -18,9 +17,12 @@ export default function ReportBuilderPage() {
   const project = searchParams.get("project");
   const reportType = searchParams.get("reportType");
 
-  // Step state
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
+  const [modalData, setModalData] = useState<{ section: string; open: boolean }>({
+    section: "",
+    open: false,
+  });
 
   const handleContinue = () => {
     if (activeStep < steps.length - 1) {
@@ -29,7 +31,7 @@ export default function ReportBuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8 relative overflow-visible">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <button
@@ -49,7 +51,7 @@ export default function ReportBuilderPage() {
       </div>
 
       {/* Layout */}
-      <div className="grid md:grid-cols-[280px_1fr] gap-8">
+      <div className="grid md:grid-cols-[280px_1fr] gap-8 relative overflow-visible">
         {/* Sidebar */}
         <div className="space-y-4">
           <h3 className="text-sm text-zinc-400">
@@ -83,39 +85,49 @@ export default function ReportBuilderPage() {
         </div>
 
         {/* Main content */}
-        <div className="card p-6 bg-zinc-900 border border-white/10 rounded-2xl">
+        <div className="card p-6 bg-zinc-900 border border-white/10 rounded-2xl relative overflow-visible">
           <StepContent
             step={activeStep}
             onContinue={handleContinue}
             selectedStyle={selectedStyle}
             setSelectedStyle={setSelectedStyle}
+            setModalData={setModalData}
           />
         </div>
       </div>
+
+      {/* Global Modal rendered at root level */}
+      {modalData.open && (
+        <ChapterModal
+          section={modalData.section}
+          onClose={() => setModalData({ section: "", open: false })}
+        />
+      )}
     </div>
   );
 }
 
 /* -----------------------------------
- * Step content rendering
+ * Step Content
  * ----------------------------------- */
 function StepContent({
   step,
   onContinue,
   selectedStyle,
   setSelectedStyle,
+  setModalData,
 }: {
   step: number;
   onContinue: () => void;
   selectedStyle: number | null;
   setSelectedStyle: (index: number) => void;
+  setModalData: (data: { section: string; open: boolean }) => void;
 }) {
   switch (step) {
     case 0:
       return (
         <div>
           <h2 className="text-lg font-semibold mb-6">Report Info</h2>
-
           <div className="mb-6">
             <label className="block text-sm mb-2 text-zinc-400">Title</label>
             <input
@@ -145,17 +157,19 @@ function StepContent({
             />
           </div>
 
-          <button
-            onClick={onContinue}
-            className="px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all"
-          >
-            Continue
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={onContinue}
+              className="px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all flex"
+            >
+              Continue
+            </button>
+          </div>
         </div>
       );
 
     case 1:
-      return <SectionsStep onContinue={onContinue} />;
+      return <SectionsStep onContinue={onContinue} setModalData={setModalData} />;
 
     case 2:
       return (
@@ -190,33 +204,6 @@ function StepContent({
       );
 
     case 4:
-      return (
-        <div>
-          <h2 className="text-lg font-semibold mb-6">Translations</h2>
-          <p className="text-zinc-400 mb-4">
-            Choose languages you want your report translated into.
-          </p>
-          <select
-            multiple
-            className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 outline-none focus:ring-2 focus:ring-brand-purple"
-          >
-            <option>English</option>
-            <option>Spanish</option>
-            <option>French</option>
-            <option>German</option>
-          </select>
-          <div className="mt-8 flex justify-end">
-            <button
-              onClick={onContinue}
-              className="px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      );
-
-    case 5:
       return <ReviewStep selectedStyle={selectedStyle} />;
 
     default:
@@ -227,7 +214,13 @@ function StepContent({
 /* -----------------------------------
  * Step 2: Sections
  * ----------------------------------- */
-function SectionsStep({ onContinue }: { onContinue: () => void }) {
+function SectionsStep({
+  onContinue,
+  setModalData,
+}: {
+  onContinue: () => void;
+  setModalData: (data: { section: string; open: boolean }) => void;
+}) {
   const allSections = [
     "Executive Summary",
     "Introduction",
@@ -237,7 +230,6 @@ function SectionsStep({ onContinue }: { onContinue: () => void }) {
     "Opportunities and Challenges",
     "Conclusion",
   ];
-
   const [visibleSections, setVisibleSections] = useState<string[]>([
     allSections[0],
   ]);
@@ -254,19 +246,19 @@ function SectionsStep({ onContinue }: { onContinue: () => void }) {
     <div>
       <h2 className="text-lg font-semibold mb-6">Sections</h2>
       <p className="text-zinc-400 mb-4">
-        Add sections to structure your report. New sections will appear
-        progressively as you add them.
+        Add sections to structure your report. Click on a section to edit its
+        details.
       </p>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 relative overflow-visible">
         {visibleSections.map((section) => (
-          <div
+          <button
             key={section}
-            className="flex items-center justify-between p-3 rounded-xl bg-zinc-800 border border-white/10"
+            onClick={() => setModalData({ section, open: true })}
+            className="flex items-center justify-between p-3 rounded-xl bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-all"
           >
             <span>{section}</span>
-            <Check className="h-4 w-4 text-emerald-400" />
-          </div>
+          </button>
         ))}
 
         <button
@@ -282,13 +274,178 @@ function SectionsStep({ onContinue }: { onContinue: () => void }) {
         </button>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex justify-center">
         <button
           onClick={onContinue}
           className="px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all"
         >
           Continue
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* -----------------------------------
+ * Modal (Now Global)
+ * ----------------------------------- */
+function ChapterModal({
+  section,
+  onClose,
+}: {
+  section: string;
+  onClose: () => void;
+}) {
+  const [textareaValue, setTextareaValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [resultVisible, setResultVisible] = useState(false);
+
+  const suggestions = [
+    `Write a ${section} that provides a clear overview of the topic and incorporates the significant findings from the research.`,
+    `Write a ${section} chapter that provides an overview of the topic and incorporates a brief summary of the key findings from the study.`,
+    `Write a ${section} that focuses on summarizing the key findings succinctly and setting the stage for the detailed analysis that follows.`,
+    `Write a ${section} paragraph that presents the research focus and includes a summary of the important conclusions from the study.`,
+  ];
+
+  const handleTryNow = () => {
+    if (!textareaValue.trim()) return;
+    setIsLoading(true);
+    setResultVisible(false);
+
+    setTimeout(() => {
+      setIsLoading(false);
+      setResultVisible(true);
+    }, 5000); // 5 seconds loader simulation
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-zinc-900 text-zinc-100 rounded-xl shadow-2xl w-[95%] max-w-3xl min-h-[70vh] flex flex-col border border-white/10 animate-scaleIn"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <h2 className="text-xl font-semibold text-white">Chapter Details</h2>
+          <button
+            className="text-zinc-400 hover:text-white transition"
+            onClick={onClose}
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Section name */}
+          <input
+            type="text"
+            value={section}
+            readOnly
+            className="w-full p-3 rounded-md bg-zinc-800 text-white border border-white/10 outline-none focus:ring-2 focus:ring-purple-500"
+          />
+
+          {/* Textarea and Try button */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start">
+            <textarea
+              rows={3}
+              value={textareaValue}
+              onChange={(e) => setTextareaValue(e.target.value)}
+              placeholder={`Provide an overview for ${section.toLowerCase()}...`}
+              className="flex-1 p-3 rounded-md bg-zinc-800 text-white border border-white/10 focus:ring-2 focus:ring-purple-500 outline-none resize-none placeholder-zinc-400"
+            />
+            <button
+              onClick={handleTryNow}
+              disabled={isLoading}
+              className={`px-5 py-2 rounded-md font-medium transition ${
+                isLoading
+                  ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                  : "bg-purple-700 hover:bg-purple-800 text-white"
+              }`}
+            >
+              {isLoading ? "Generating..." : "Try it now"}
+            </button>
+          </div>
+
+          {/* Loader */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-10">
+              <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm text-zinc-400 mt-3">
+                Generating your chapter...
+              </p>
+            </div>
+          )}
+
+          {/* Generated Result */}
+          {resultVisible && (
+            <div className="rounded-md p-5 bg-purple-950/30 border border-purple-700">
+              <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">
+                Unfortunately, there seems to be a misunderstanding as I have
+                not been provided with any actual documents to reference for
+                drafting an Executive Summary or creating a chapter. Without
+                specific documents or detailed data, it's not possible to craft
+                an accurate or meaningful Executive Summary or chapter content
+                in a research-centric manner.
+                {"\n\n"}
+                However, I can provide a general approach to crafting an{" "}
+                {section} based on typical research processes:
+                {"\n\n"}
+                An {section} for a research report succinctly synthesizes the
+                key findings, methodology, and implications of the study. It
+                begins by outlining the research problem or question, followed
+                by a brief overview of the research design and methods used to
+                collect and analyze data. It then presents the major findings in
+                a clear and concise manner, highlighting the most important data
+                points and insights derived from the analysis. The {section}{" "}
+                concludes by discussing the research's contributions to the
+                field, its practical applications, and recommendations for
+                future research or policy implications.
+              </p>
+            </div>
+          )}
+
+          {/* Try this descriptions */}
+          {!isLoading && !resultVisible && (
+            <div className="border border-white/10 rounded-md p-4 bg-zinc-800/50">
+              <h3 className="text-sm font-medium text-zinc-300 mb-4">
+                Try this descriptions
+              </h3>
+              <div className="space-y-3">
+                {suggestions.map((desc, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTextareaValue(desc)}
+                    className="w-full text-left p-3 rounded-md border border-white/10 bg-zinc-900 hover:bg-purple-900/40 transition text-sm text-zinc-200 leading-relaxed"
+                  >
+                    {desc}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer note */}
+          {!isLoading && (
+            <div className="border-t border-white/10 pt-3 text-sm text-zinc-400">
+              Result Based on{" "}
+              <span className="font-semibold text-white">My Insight</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer button */}
+        <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 rounded-md bg-purple-700 hover:bg-purple-800 text-white font-medium transition"
+          >
+            Add to report
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -306,17 +463,11 @@ function ReportStyleStep({
   setSelectedStyle: (index: number) => void;
   onContinue: () => void;
 }) {
-  const themes = [
-    "/themes/theme1.png",
-    "/themes/theme2.png",
-    "/themes/theme3.png",
-  ];
-
+  const themes = ["/themes/theme1.png", "/themes/theme2.png", "/themes/theme3.png"];
   return (
     <div>
       <h2 className="text-lg font-semibold mb-6">Report Style</h2>
       <h3 className="text-sm text-zinc-400 mb-4">Select Theme</h3>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {themes.map((img, index) => (
           <div
@@ -341,7 +492,6 @@ function ReportStyleStep({
           </div>
         ))}
       </div>
-
       <div className="mt-8 flex justify-end">
         <button
           onClick={onContinue}
@@ -363,16 +513,10 @@ function ReportStyleStep({
  * Step 5: Review
  * ----------------------------------- */
 function ReviewStep({ selectedStyle }: { selectedStyle: number | null }) {
-  const themes = [
-    "/themes/theme1.png",
-    "/themes/theme2.png",
-    "/themes/theme3.png",
-  ];
-
+  const themes = ["/themes/theme1.png", "/themes/theme2.png", "/themes/theme3.png"];
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <h2 className="text-lg font-semibold mb-6">Review</h2>
-
       {selectedStyle !== null ? (
         <img
           src={themes[selectedStyle]}
@@ -384,12 +528,10 @@ function ReviewStep({ selectedStyle }: { selectedStyle: number | null }) {
           No style selected. Please go back to choose a theme.
         </p>
       )}
-
       <h3 className="text-xl font-medium mb-2">Yayyy!</h3>
       <p className="text-zinc-400 mb-6">
         You're all set to create the report.
       </p>
-
       <button className="flex items-center gap-2 px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all">
         Create Report
         <ArrowRight size={16} />
