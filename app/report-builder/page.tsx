@@ -2,7 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Check, ArrowRight, X } from "lucide-react";
+import { Check, ArrowRight, X, Workflow } from "lucide-react";
+import { title } from "process";
 
 const steps = [
   "Report Info",
@@ -16,6 +17,9 @@ export default function ReportBuilderPage() {
   const searchParams = useSearchParams();
   const project = searchParams.get("project");
   const reportType = searchParams.get("reportType");
+  const [title, setTitle] = useState("");
+  const [authors, setAuthors] = useState("");
+  const [description, setDescription] = useState("");
 
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
@@ -24,11 +28,56 @@ export default function ReportBuilderPage() {
     open: false,
   });
 
-  const handleContinue = () => {
+const handleContinue = async () => {
+  try {
+    const payload = [
+      {
+        workflow: "Report_Info_Continue",
+        step: activeStep,
+        project,
+        reportType,
+        Title: title,                 
+        Authors: authors,           
+        "Report Description": description,
+        wid: "roverresearchreport6698ac68e953e",
+        action: "next",
+        follow: true,
+        shcode: "reportinfo6694c7f7e8c3c",
+        dna_filter_key: "ReportID",
+        dna_filter_val: "d8d7b45e-1664-4534-b528-e923a8a6a9c1",
+        app_filter: "ReportID::d8d7b45e-1664-4534-b528-e923a8a6a9c1",
+        app_search: "",
+        app_short_code: "injomo663331f2c5f00",
+        shortcode: "reportinfo6694c7f7e8c3c",
+      },
+    ];
+
+    const response = await fetch("/api/report-proxy", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await response.text();
+    console.log("Raw response body:", text);
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const result = JSON.parse(text);
+    console.log("Proxy API Response:", result);
+
     if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     }
-  };
+  } catch (error) {
+    console.error("Error calling API:", error);
+    alert("Something went wrong while connecting to the server. Check console for details.");
+  }
+};
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8 relative overflow-visible">
@@ -92,6 +141,12 @@ export default function ReportBuilderPage() {
             selectedStyle={selectedStyle}
             setSelectedStyle={setSelectedStyle}
             setModalData={setModalData}
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+            authors={authors}
+            setAuthors={setAuthors}
           />
         </div>
       </div>
@@ -116,12 +171,24 @@ function StepContent({
   selectedStyle,
   setSelectedStyle,
   setModalData,
+  title,
+  setTitle,
+  description,
+  setDescription,
+  authors,
+  setAuthors
 }: {
   step: number;
   onContinue: () => void;
   selectedStyle: number | null;
   setSelectedStyle: (index: number) => void;
   setModalData: (data: { section: string; open: boolean }) => void;
+  title: string;
+  setTitle: (v: string) => void;
+  description: string;
+  setDescription: (v: string) => void;
+  authors: string;
+  setAuthors: (v: string) => void;
 }) {
   switch (step) {
     case 0:
@@ -134,6 +201,8 @@ function StepContent({
               type="text"
               placeholder="Write your Research topic / Report title here."
               className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 outline-none focus:ring-2 focus:ring-brand-purple"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
@@ -145,6 +214,8 @@ function StepContent({
               rows={4}
               placeholder="Briefly describe the purpose of your report..."
               className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 outline-none focus:ring-2 focus:ring-brand-purple"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
@@ -154,6 +225,8 @@ function StepContent({
               type="text"
               placeholder="Robert D Boss"
               className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 outline-none focus:ring-2 focus:ring-brand-purple"
+              value={authors}
+              onChange={(e) => setAuthors(e.target.value)}
             />
           </div>
 
@@ -299,6 +372,7 @@ function ChapterModal({
   const [textareaValue, setTextareaValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [resultVisible, setResultVisible] = useState(false);
+  const [generatedText, setGeneratedText] = useState("");
 
   const suggestions = [
     `Write a ${section} that provides a clear overview of the topic and incorporates the significant findings from the research.`,
@@ -307,16 +381,83 @@ function ChapterModal({
     `Write a ${section} paragraph that presents the research focus and includes a summary of the important conclusions from the study.`,
   ];
 
-  const handleTryNow = () => {
+  const handleTryNow = async () => {
     if (!textareaValue.trim()) return;
+
     setIsLoading(true);
     setResultVisible(false);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      setResultVisible(true);
-    }, 5000); // 5 seconds loader simulation
+    // Prepare payload same as handleContinue()
+    const payload = [
+      {
+        workflow: "TryItNowButton",
+        step: "chapter-generate",
+        data: {
+          section,
+          prompt: textareaValue,
+        },
+      },
+    ];
+
+    try {
+      const response = await fetch("/api/report-proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await response.text();
+      console.log("Raw response body:", text);
+
+      if (!response.ok) throw new Error("API failed");
+
+      const result = JSON.parse(text);
+
+      // Show generated content
+      setGeneratedText(result.data || "No response received.");
+
+    } catch (err) {
+      console.error("Error:", err);
+      setGeneratedText("Something went wrong while generating the chapter.");
+    }
+
+    setIsLoading(false);
+    setResultVisible(true);
   };
+
+
+  const handleAddToReport = async () => {
+  const payload = [
+    {
+      workflow: "AddToReport",
+      step: "chapter-save",
+      data: {
+        section,
+        content: generatedText || textareaValue,
+      },
+    },
+  ];
+
+  try {
+    const response = await fetch("/api/report-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const raw = await response.text();
+    console.log("Add-to-report response:", raw);
+
+    if (!response.ok) throw new Error("Save failed");
+
+    onClose(); // Close modal after saving
+  } catch (err) {
+    alert("Failed to save section. Check console.");
+    console.error(err);
+  }
+};
 
   return (
     <div
@@ -384,26 +525,7 @@ function ChapterModal({
           {resultVisible && (
             <div className="rounded-md p-5 bg-purple-950/30 border border-purple-700">
               <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">
-                Unfortunately, there seems to be a misunderstanding as I have
-                not been provided with any actual documents to reference for
-                drafting an Executive Summary or creating a chapter. Without
-                specific documents or detailed data, it's not possible to craft
-                an accurate or meaningful Executive Summary or chapter content
-                in a research-centric manner.
-                {"\n\n"}
-                However, I can provide a general approach to crafting an{" "}
-                {section} based on typical research processes:
-                {"\n\n"}
-                An {section} for a research report succinctly synthesizes the
-                key findings, methodology, and implications of the study. It
-                begins by outlining the research problem or question, followed
-                by a brief overview of the research design and methods used to
-                collect and analyze data. It then presents the major findings in
-                a clear and concise manner, highlighting the most important data
-                points and insights derived from the analysis. The {section}{" "}
-                concludes by discussing the research's contributions to the
-                field, its practical applications, and recommendations for
-                future research or policy implications.
+                {generatedText}
               </p>
             </div>
           )}
@@ -440,7 +562,7 @@ function ChapterModal({
         {/* Footer button */}
         <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end">
           <button
-            onClick={onClose}
+            onClick={handleAddToReport}
             className="px-6 py-2 rounded-md bg-purple-700 hover:bg-purple-800 text-white font-medium transition"
           >
             Add to report
