@@ -1,6 +1,6 @@
 "use client";
-
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useState } from "react";
 import { Check, ArrowRight, X, Workflow } from "lucide-react";
 import { title } from "process";
@@ -20,6 +20,7 @@ export default function ReportBuilderPage() {
   const [title, setTitle] = useState("");
   const [authors, setAuthors] = useState("");
   const [description, setDescription] = useState("");
+  const [prompt, setprompt] = useState("");
 
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
@@ -44,15 +45,15 @@ const handleContinue = async () => {
         follow: true,
         shcode: "reportinfo6694c7f7e8c3c",
         dna_filter_key: "ReportID",
-        dna_filter_val: "d8d7b45e-1664-4534-b528-e923a8a6a9c1",
-        app_filter: "ReportID::d8d7b45e-1664-4534-b528-e923a8a6a9c1",
+        dna_filter_val: "6718e846-6c6b-4577-9f09-2ce63a9a4124",
+        app_filter: "ReportID::6718e846-6c6b-4577-9f09-2ce63a9a4124",
         app_search: "",
         app_short_code: "injomo663331f2c5f00",
-        shortcode: "reportinfo6694c7f7e8c3c",
+        shortcode: "reportinfo6694c7f7e8c3c ",
       },
     ];
 
-    const response = await fetch("/api/report-proxy", {
+    const response = await fetch("/workflow.trigger/roverresearchreport6698ac68e953e", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -80,6 +81,8 @@ const handleContinue = async () => {
 };
 
   return (
+    <Suspense fallback={<div className="text-white p-6">Loading...</div>}>
+
     <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8 relative overflow-visible">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
@@ -135,6 +138,7 @@ const handleContinue = async () => {
 
         {/* Main content */}
         <div className="card p-6 bg-zinc-900 border border-white/10 rounded-2xl relative overflow-visible">
+          <Suspense fallback={<div>Loading report builder…</div>}>
           <StepContent
             step={activeStep}
             onContinue={handleContinue}
@@ -148,6 +152,7 @@ const handleContinue = async () => {
             authors={authors}
             setAuthors={setAuthors}
           />
+          </Suspense>
         </div>
       </div>
 
@@ -159,6 +164,7 @@ const handleContinue = async () => {
         />
       )}
     </div>
+    </Suspense>
   );
 }
 
@@ -392,15 +398,16 @@ function ChapterModal({
       {
         workflow: "TryItNowButton",
         step: "chapter-generate",
-        data: {
-          section,
-          prompt: textareaValue,
-        },
-      },
+        section: section,
+        promt: textareaValue,
+        ReportID: "6718e846-6c6b-4577-9f09-2ce63a9a4124",
+        sectionID: "5dbf1989-ff49-46d4-84b6-4e70fc0f014c",
+        tag: "edit",
+      }
     ];
 
     try {
-      const response = await fetch("/api/report-proxy", {
+      const response = await fetch("workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -441,7 +448,7 @@ function ChapterModal({
   ];
 
   try {
-    const response = await fetch("/api/report-proxy", {
+    const response = await fetch("workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
