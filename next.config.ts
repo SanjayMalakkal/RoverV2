@@ -12,7 +12,7 @@ export default nextConfig;
 
 // next.config.js
 
-/* module.exports = {
+module.exports = {
   async rewrites() {
     return [
       {
@@ -21,4 +21,4 @@ export default nextConfig;
       },
     ];
   },
-}; */
+}; 

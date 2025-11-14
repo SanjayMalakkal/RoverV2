@@ -2,6 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { Check, ArrowRight, X, Workflow } from "lucide-react";
 import { title } from "process";
 
@@ -29,6 +30,7 @@ function ReportBuilderContent() {
   const [authors, setAuthors] = useState("");
   const [description, setDescription] = useState("");
   const [prompt, setprompt] = useState("");
+  const [references, setReferences] = useState([]);
 
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
@@ -37,54 +39,175 @@ function ReportBuilderContent() {
     open: false,
   });
 
+  useEffect(() => {
+    if (activeStep === 2) {
+      handleReferenceWorkflow();
+    }
+  }, [activeStep]);
+
 const handleContinue = async () => {
   try {
-    const payload = [
-      {
-        workflow: "Report_Info_Continue",
-        step: activeStep,
-        project,
-        reportType,
-        Title: title,                 
-        Authors: authors,           
-        "Report Description": description,
-        wid: "roverresearchreport6698ac68e953e",
-        action: "next",
-        follow: true,
-        shcode: "reportinfo6694c7f7e8c3c",
-        dna_filter_key: "ReportID",
-        dna_filter_val: "6718e846-6c6b-4577-9f09-2ce63a9a4124",
-        app_filter: "ReportID::6718e846-6c6b-4577-9f09-2ce63a9a4124",
-        app_search: "",
-        app_short_code: "injomo663331f2c5f00",
-        shortcode: "reportinfo6694c7f7e8c3c ",
-      },
-    ];
+    let payload = [];
+    let shortcode = "";
+    let workflowId = "roverresearchreport6698ac68e953e";
 
-    const response = await fetch("/workflow.trigger/roverresearchreport6698ac68e953e", {
+    // STEP 0 → Report Info
+    if (activeStep === 0) {
+      shortcode = "reportinfo6694c7f7e8c3c";
+      payload = [
+        {
+          scope: "",
+          wid: workflowId,
+          action: "next",
+          follow: true,
+          dna_filter_key: "ReportID",
+          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_search: "",
+          app_short_code: "injomo663331f2c5f00",
+          Title: title,
+          "Report Description": description,
+          Authors: authors,
+          shortcode,
+        },
+      ];
+    }
+
+    // STEP 1 → Sections
+    if (activeStep === 1) {
+      shortcode = "sections6694cb32de384";
+      payload = [
+        {
+          scope: "",
+          wid: workflowId,
+          action: "next",
+          follow: true,
+          dna_filter_key: "ReportID",
+          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_search: "",
+          app_short_code: "injomo663331f2c5f00",
+          shortcode,
+        },
+      ];
+    }
+
+    // STEP 2 → Add Reference
+    if (activeStep === 2) {
+      shortcode = "reference6694cb6ced907";
+      payload = [
+        {
+          scope: "",
+          wid: workflowId,
+          action: "next",
+          follow: true,
+          dna_filter_key: "ReportID",
+          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          app_search: "",
+          app_short_code: "injomo663331f2c5f00",
+          shortcode,
+        },
+      ];
+    }
+
+    // STEP 3 → Report Style
+    if (activeStep === 3) {
+      payload = [
+        {
+          wid: workflowId,
+          follow: true,
+          template: "template12",
+          tag: "theme",
+          status: true,
+          reportId: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+          shortcode: "reportstyle6694cbb269343",
+        },
+      ];
+    }
+
+    // CALL THE WORKFLOW
+    const response = await fetch(`/workflow.trigger/${workflowId}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    const text = await response.text();
-    console.log("Raw response body:", text);
+    if (!response.ok) throw new Error("API error");
+    await response.text();
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
-
-    const result = JSON.parse(text);
-    console.log("Proxy API Response:", result);
-
+    // MOVE TO NEXT STEP
     if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     }
   } catch (error) {
     console.error("Error calling API:", error);
-    alert("Something went wrong while connecting to the server. Check console for details.");
+    alert("Error while calling API. Check console.");
+  }
+};
+
+  const handleReferenceWorkflow = async () => {
+    try {
+      const payload = [
+        {
+          workflow: "Add_Reference",
+          reportId: "c3346a3a-7d3b-4c30-a694-ed36ef1966ff",
+          tag: "Referenece",
+        },
+      ];
+
+      const response = await fetch(
+        "/workflow.trigger/roverresearchreportdatafetch669f4eca89979",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const raw = await response.text();
+      console.log("Reference workflow raw:", raw);
+
+      const json = JSON.parse(raw);
+      const parsedReferences = JSON.parse(json[0].Data);
+
+      setReferences(parsedReferences);
+
+    } catch (err) {
+      console.error("Reference workflow error:", err);
+    }
+  };
+
+  const handleCreateEbook = async () => {
+  try {
+    const payload = [
+      {
+        scope: "",
+        wid: "roverresearchreportredirecttopreview66c45d7168478",
+        reportid: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+        follow: true,
+        dna_filter_key: "ReportID",
+        dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+        app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+        app_search: "",
+        app_short_code: "injomo663331f2c5f00",
+        shortcode: "reportstyle6694cbb269343",
+      },
+    ];
+
+    await fetch(
+      "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    alert("Redirecting to Preview...");
+  } catch (err) {
+    console.error("Create Ebook Error:", err);
+    alert("Failed to create ebook.");
   }
 };
 
@@ -118,15 +241,17 @@ const handleContinue = async () => {
 
           <div className="flex flex-col gap-3 mt-4">
             {steps.map((step, index) => (
-              <button
-                key={step}
-                onClick={() => setActiveStep(index)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
-                  activeStep === index
-                    ? "bg-brand-purple/30 border border-brand-purple text-white"
-                    : "bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:bg-zinc-800"
-                }`}
-              >
+            <button
+              key={step}
+              onClick={() => {
+                setActiveStep(index);       // Only this
+              }}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
+                activeStep === index
+                  ? "bg-brand-purple/30 border border-brand-purple text-white"
+                  : "bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:bg-zinc-800"
+              }`}
+            >
                 <div
                   className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
                     activeStep === index
@@ -157,6 +282,8 @@ const handleContinue = async () => {
             setDescription={setDescription}
             authors={authors}
             setAuthors={setAuthors}
+            references={references}
+            handleCreateEbook={handleCreateEbook}
           />
           </Suspense>
         </div>
@@ -187,7 +314,9 @@ function StepContent({
   description,
   setDescription,
   authors,
-  setAuthors
+  setAuthors,
+  references,
+  handleCreateEbook
 }: {
   step: number;
   onContinue: () => void;
@@ -200,6 +329,8 @@ function StepContent({
   setDescription: (v: string) => void;
   authors: string;
   setAuthors: (v: string) => void;
+  references: any[];
+  handleCreateEbook: () => void;
 }) {
   switch (step) {
     case 0:
@@ -262,11 +393,19 @@ function StepContent({
           <p className="text-zinc-400 mb-4">
             Add reference links, citations, or source materials.
           </p>
-          <textarea
-            rows={4}
-            placeholder="Paste reference URLs or notes here..."
-            className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 outline-none focus:ring-2 focus:ring-brand-purple"
-          />
+          <div className="flex flex-col gap-4">
+          {references.map((ref, idx) => (
+            <input
+              key={ref.ReferenceID}
+              type="text"
+              value={ref.Reference}
+              readOnly
+              onClick={() => console.log("Clicked", ref)}
+              className="w-full p-3 rounded-lg bg-zinc-800 border border-white/10 
+                        outline-none cursor-pointer hover:bg-zinc-700 transition"
+            />
+          ))}
+        </div>
           <div className="mt-8 flex justify-end">
             <button
               onClick={onContinue}
@@ -288,7 +427,7 @@ function StepContent({
       );
 
     case 4:
-      return <ReviewStep selectedStyle={selectedStyle} />;
+      return <ReviewStep selectedStyle={selectedStyle} onCreateEbook={handleCreateEbook} />;
 
     default:
       return null;
@@ -646,7 +785,13 @@ function ReportStyleStep({
 /* -----------------------------------
  * Step 5: Review
  * ----------------------------------- */
-function ReviewStep({ selectedStyle }: { selectedStyle: number | null }) {
+function ReviewStep({
+  selectedStyle,
+  onCreateEbook,
+}: {
+  selectedStyle: number | null;
+  onCreateEbook: () => void;
+}){
   const themes = ["/themes/theme1.png", "/themes/theme2.png", "/themes/theme3.png"];
   return (
     <div className="flex flex-col items-center justify-center text-center">
@@ -666,10 +811,13 @@ function ReviewStep({ selectedStyle }: { selectedStyle: number | null }) {
       <p className="text-zinc-400 mb-6">
         You're all set to create the report.
       </p>
-      <button className="flex items-center gap-2 px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all">
-        Create Report
-        <ArrowRight size={16} />
-      </button>
+      <button
+      onClick={onCreateEbook}
+      className="flex items-center gap-2 px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all"
+    >
+      Create Report
+      <ArrowRight size={16} />
+    </button>
     </div>
   );
 }
