@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export',
+   basePath: "/rover-ebook/",
+  assetPrefix: "/rover-ebook/",
   /* config options here */
 };
 
