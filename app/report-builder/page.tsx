@@ -14,6 +14,14 @@ const steps = [
 ];
 
 export default function ReportBuilderPage() {
+  return (
+    <Suspense fallback={<div className="text-white p-6">Loading...</div>}>
+      <ReportBuilderContent />
+    </Suspense>
+  );
+}
+
+function ReportBuilderContent() {
   const searchParams = useSearchParams();
   const project = searchParams.get("project");
   const reportType = searchParams.get("reportType");
@@ -81,8 +89,6 @@ const handleContinue = async () => {
 };
 
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading...</div>}>
-
     <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8 relative overflow-visible">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
@@ -164,7 +170,6 @@ const handleContinue = async () => {
         />
       )}
     </div>
-    </Suspense>
   );
 }
 

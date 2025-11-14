@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'export',
+   basePath: "/rover-ebook",
+  assetPrefix: "/rover-ebook/",
   /* config options here */
 };
 
@@ -9,7 +12,7 @@ export default nextConfig;
 
 // next.config.js
 
-module.exports = {
+/* module.exports = {
   async rewrites() {
     return [
       {
@@ -18,5 +21,4 @@ module.exports = {
       },
     ];
   },
-};
-
+}; */
