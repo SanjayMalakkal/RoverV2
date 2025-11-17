@@ -31,6 +31,11 @@ function ReportBuilderContent() {
   const [description, setDescription] = useState("");
   const [prompt, setprompt] = useState("");
   const [references, setReferences] = useState([]);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorContent, setEditorContent] = useState("");
+  const [finalReportId, setFinalReportId] = useState("");
+  const reportId = finalReportId || localStorage.getItem("reportId");
+
 
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
@@ -47,7 +52,7 @@ function ReportBuilderContent() {
 
 const handleContinue = async () => {
   try {
-    let payload = [];
+    let payload: any[] = [];
     let shortcode = "";
     let workflowId = "roverresearchreport6698ac68e953e";
 
@@ -61,8 +66,8 @@ const handleContinue = async () => {
           action: "next",
           follow: true,
           dna_filter_key: "ReportID",
-          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
-          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          dna_filter_val: reportId,
+          // app_filter: "ReportID::${reportId}",
           app_search: "",
           app_short_code: "injomo663331f2c5f00",
           Title: title,
@@ -83,8 +88,8 @@ const handleContinue = async () => {
           action: "next",
           follow: true,
           dna_filter_key: "ReportID",
-          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
-          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          dna_filter_val: reportId,
+          // app_filter: "ReportID::${reportId}",
           app_search: "",
           app_short_code: "injomo663331f2c5f00",
           shortcode,
@@ -102,8 +107,8 @@ const handleContinue = async () => {
           action: "next",
           follow: true,
           dna_filter_key: "ReportID",
-          dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
-          app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
+          dna_filter_val: reportId,
+          // app_filter: "ReportID::${reportId}",
           app_search: "",
           app_short_code: "injomo663331f2c5f00",
           shortcode,
@@ -120,7 +125,7 @@ const handleContinue = async () => {
           template: "template12",
           tag: "theme",
           status: true,
-          reportId: "b5da3c81-4968-42bc-bfe1-961e0129c336",
+          reportId: reportId,
           shortcode: "reportstyle6694cbb269343",
         },
       ];
@@ -129,6 +134,7 @@ const handleContinue = async () => {
     // CALL THE WORKFLOW
     const response = await fetch(`/workflow.trigger/${workflowId}`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
@@ -151,7 +157,7 @@ const handleContinue = async () => {
       const payload = [
         {
           workflow: "Add_Reference",
-          reportId: "c3346a3a-7d3b-4c30-a694-ed36ef1966ff",
+          reportId: reportId,
           tag: "Referenece",
         },
       ];
@@ -179,24 +185,38 @@ const handleContinue = async () => {
   };
 
   const handleCreateEbook = async () => {
-  try {
-    const payload = [
-      {
-        scope: "",
-        wid: "roverresearchreportredirecttopreview66c45d7168478",
-        reportid: "b5da3c81-4968-42bc-bfe1-961e0129c336",
-        follow: true,
-        dna_filter_key: "ReportID",
-        dna_filter_val: "b5da3c81-4968-42bc-bfe1-961e0129c336",
-        app_filter: "ReportID::b5da3c81-4968-42bc-bfe1-961e0129c336",
-        app_search: "",
-        app_short_code: "injomo663331f2c5f00",
-        shortcode: "reportstyle6694cbb269343",
-      },
-    ];
+    try {
+      const payload = [{}];
 
-    await fetch(
-      "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
+      const response = await fetch(
+        "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const raw = await response.text();
+      const json = JSON.parse(raw);
+
+      const newReportId = json[0].ReportID;
+
+      setFinalReportId(newReportId);
+      localStorage.setItem("reportId", newReportId);
+
+    } catch (err) {
+      console.error("Create Ebook Error:", err);
+      alert("Failed to create ebook.");
+    }
+  };
+
+const onCreateEbookPreview = async () => {
+  try {
+    const payload = [{ ReportID: finalReportId }];
+
+    const response = await fetch(
+      "/workflow.trigger/sanjaytest66ed4729d7a7e",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -204,12 +224,37 @@ const handleContinue = async () => {
       }
     );
 
-    alert("Redirecting to Preview...");
-  } catch (err) {
-    console.error("Create Ebook Error:", err);
-    alert("Failed to create ebook.");
+    const raw = await response.text();
+    console.log("Preview raw:", raw);
+
+    const json = JSON.parse(raw);
+
+    // REAL SECTION DATA IS INSIDE "Data"
+    const sectionsArray = JSON.parse(json[0].Data);
+
+    // CLEAN HTML → PLAIN TEXT
+    const cleanedSections = sectionsArray.map((item) => ({
+      section: item.Sections,
+      content: item.Content.replace(/<[^>]+>/g, "").trim(), // strip HTML
+    }));
+
+    setEditorContent(cleanedSections);
+    setShowEditor(true);
+
+  } catch (e) {
+    console.error("Preview workflow failed", e);
   }
 };
+
+
+if (showEditor) {
+  return (
+    <EditorView
+      content={editorContent}
+      onBack={() => setShowEditor(false)}
+    />
+  );
+}
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 px-6 md:px-12 py-8 relative overflow-visible">
@@ -244,7 +289,7 @@ const handleContinue = async () => {
             <button
               key={step}
               onClick={() => {
-                setActiveStep(index);       // Only this
+                setActiveStep(index);      
               }}
               className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
                 activeStep === index
@@ -284,6 +329,7 @@ const handleContinue = async () => {
             setAuthors={setAuthors}
             references={references}
             handleCreateEbook={handleCreateEbook}
+            onCreateEbookPreview={onCreateEbookPreview}
           />
           </Suspense>
         </div>
@@ -316,7 +362,8 @@ function StepContent({
   authors,
   setAuthors,
   references,
-  handleCreateEbook
+  handleCreateEbook,
+  onCreateEbookPreview,
 }: {
   step: number;
   onContinue: () => void;
@@ -331,6 +378,7 @@ function StepContent({
   setAuthors: (v: string) => void;
   references: any[];
   handleCreateEbook: () => void;
+  onCreateEbookPreview: () => void;
 }) {
   switch (step) {
     case 0:
@@ -427,7 +475,13 @@ function StepContent({
       );
 
     case 4:
-      return <ReviewStep selectedStyle={selectedStyle} onCreateEbook={handleCreateEbook} />;
+      return (
+          <ReviewStep
+            selectedStyle={selectedStyle}
+            onCreateEbook={handleCreateEbook}
+            onCreateEbookPreview={onCreateEbookPreview}
+          />
+        );
 
     default:
       return null;
@@ -521,8 +575,18 @@ function ChapterModal({
 }) {
   const [textareaValue, setTextareaValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [resultVisible, setResultVisible] = useState(false);
   const [generatedText, setGeneratedText] = useState("");
+  const [hideSuggestions, setHideSuggestions] = useState(false);
+  const globalReportId =
+  typeof window !== "undefined"
+    ? localStorage.getItem("reportId")
+    : null;
+
+  // NEW STATE — store values from WF-A response
+  const [reportId, setReportId] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [titleValue, setTitleValue] = useState("");
+  const [jobIdValue, setJobIdValue] = useState("");
 
   const suggestions = [
     `Write a ${section} that provides a clear overview of the topic and incorporates the significant findings from the research.`,
@@ -534,81 +598,102 @@ function ChapterModal({
   const handleTryNow = async () => {
     if (!textareaValue.trim()) return;
 
+    setHideSuggestions(true);
     setIsLoading(true);
-    setResultVisible(false);
-
-    // Prepare payload same as handleContinue()
-    const payload = [
-      {
-        workflow: "TryItNowButton",
-        step: "chapter-generate",
-        section: section,
-        promt: textareaValue,
-        ReportID: "6718e846-6c6b-4577-9f09-2ce63a9a4124",
-        sectionID: "5dbf1989-ff49-46d4-84b6-4e70fc0f014c",
-        tag: "edit",
-      }
-    ];
 
     try {
-      const response = await fetch("workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const payloadA = [
+        {
+          workflow: "TryItNowButton",
+          step: "chapter-generate",
+          section,
+          prompt: textareaValue,
+          ReportID: globalReportId,
+          sectionID: "5dbf1989-ff49-46d4-84b6-4e70fc0f014c",
+          tag: "edit",
         },
-        body: JSON.stringify(payload),
-      });
+      ];
 
-      const text = await response.text();
-      console.log("Raw response body:", text);
+      const genResponse = await fetch(
+        "/workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadA),
+        }
+      );
 
-      if (!response.ok) throw new Error("API failed");
+      const genJson = JSON.parse(await genResponse.text());
+      const wfParams = genJson[0].workflowParameters?.[0];
 
-      const result = JSON.parse(text);
+      setJobIdValue(genJson[0].jobId || "");
+      setReportId(wfParams?.ReportID || "");
+      setSectionId(wfParams?.SectionID || "");
+      setTitleValue(wfParams?.Title || "");
 
-      // Show generated content
-      setGeneratedText(result.data || "No response received.");
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+
+      const payloadB = [
+        {
+          jobId: genJson[0].jobId,
+          Section: section,
+        },
+      ];
+
+      const contentResp = await fetch(
+        "/workflow.trigger/roverresearchreportshowcontent670668ab24679",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadB),
+        }
+      );
+
+      const contentJson = JSON.parse(await contentResp.text());
+      setGeneratedText(contentJson[0].Content || "");
 
     } catch (err) {
       console.error("Error:", err);
-      setGeneratedText("Something went wrong while generating the chapter.");
+      setGeneratedText("Failed to generate content.");
     }
 
     setIsLoading(false);
-    setResultVisible(true);
   };
 
-
   const handleAddToReport = async () => {
-  const payload = [
-    {
-      workflow: "AddToReport",
-      step: "chapter-save",
-      data: {
-        section,
-        content: generatedText || textareaValue,
+    const payload = [
+      {
+        follow: true,
+        wid: "roverresearchreportsavesection66ba04fb7222c",
+        ReportID: globalReportId,
+        shortcode: "review6694cbea9a82f",
+
+        promt: textareaValue, 
+
+        sectionID: sectionId,
+        title: section,
+        tag: "edit",
+
+        jobid: jobIdValue,
       },
-    },
-  ];
+    ];
 
-  try {
-    const response = await fetch("workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      await fetch(
+        "/workflow.trigger/roverresearchreportsavesection66ba04fb7222c",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
-    const raw = await response.text();
-    console.log("Add-to-report response:", raw);
-
-    if (!response.ok) throw new Error("Save failed");
-
-    onClose(); // Close modal after saving
-  } catch (err) {
-    alert("Failed to save section. Check console.");
-    console.error(err);
-  }
-};
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save section.");
+    }
+  };
 
   return (
     <div
@@ -622,39 +707,36 @@ function ChapterModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-xl font-semibold text-white">Chapter Details</h2>
-          <button
-            className="text-zinc-400 hover:text-white transition"
-            onClick={onClose}
-          >
+          <button className="text-zinc-400 hover:text-white" onClick={onClose}>
             <X size={22} />
           </button>
         </div>
 
-        {/* Content */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Section name */}
           <input
             type="text"
             value={section}
             readOnly
-            className="w-full p-3 rounded-md bg-zinc-800 text-white border border-white/10 outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full p-3 rounded-md bg-zinc-800 border border-white/10"
           />
 
-          {/* Textarea and Try button */}
+          {/* Textarea + Try Now */}
           <div className="flex flex-col sm:flex-row gap-3 items-start">
             <textarea
               rows={3}
               value={textareaValue}
               onChange={(e) => setTextareaValue(e.target.value)}
               placeholder={`Provide an overview for ${section.toLowerCase()}...`}
-              className="flex-1 p-3 rounded-md bg-zinc-800 text-white border border-white/10 focus:ring-2 focus:ring-purple-500 outline-none resize-none placeholder-zinc-400"
+              className="flex-1 p-3 rounded-md bg-zinc-800 border border-white/10"
             />
+
             <button
               onClick={handleTryNow}
               disabled={isLoading}
-              className={`px-5 py-2 rounded-md font-medium transition ${
+              className={`px-5 py-2 rounded-md ${
                 isLoading
-                  ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                  ? "bg-zinc-700 text-zinc-400"
                   : "bg-purple-700 hover:bg-purple-800 text-white"
               }`}
             >
@@ -662,37 +744,16 @@ function ChapterModal({
             </button>
           </div>
 
-          {/* Loader */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-10">
-              <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-zinc-400 mt-3">
-                Generating your chapter...
-              </p>
-            </div>
-          )}
-
-          {/* Generated Result */}
-          {resultVisible && (
-            <div className="rounded-md p-5 bg-purple-950/30 border border-purple-700">
-              <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-line">
-                {generatedText}
-              </p>
-            </div>
-          )}
-
-          {/* Try this descriptions */}
-          {!isLoading && !resultVisible && (
+          {/* Suggestions */}
+          {!hideSuggestions && !generatedText && (
             <div className="border border-white/10 rounded-md p-4 bg-zinc-800/50">
-              <h3 className="text-sm font-medium text-zinc-300 mb-4">
-                Try this descriptions
-              </h3>
+              <h3 className="text-sm font-medium mb-4">Try this descriptions</h3>
               <div className="space-y-3">
                 {suggestions.map((desc, i) => (
                   <button
                     key={i}
                     onClick={() => setTextareaValue(desc)}
-                    className="w-full text-left p-3 rounded-md border border-white/10 bg-zinc-900 hover:bg-purple-900/40 transition text-sm text-zinc-200 leading-relaxed"
+                    className="w-full text-left p-3 rounded-md bg-zinc-900 border border-white/10 hover:bg-purple-900/40"
                   >
                     {desc}
                   </button>
@@ -701,20 +762,28 @@ function ChapterModal({
             </div>
           )}
 
-          {/* Footer note */}
-          {!isLoading && (
-            <div className="border-t border-white/10 pt-3 text-sm text-zinc-400">
-              Result Based on{" "}
-              <span className="font-semibold text-white">My Insight</span>
+          {/* Loader */}
+          {isLoading && (
+            <div className="flex flex-col items-center py-10">
+              <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-zinc-400 mt-3">Generating your chapter...</p>
             </div>
+          )}
+
+          {/* Generated content */}
+          {generatedText && !isLoading && (
+            <div
+              className="rounded-md p-5 bg-purple-950/30 border border-purple-700"
+              dangerouslySetInnerHTML={{ __html: generatedText }}
+            />
           )}
         </div>
 
-        {/* Footer button */}
+        {/* Footer */}
         <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end">
           <button
             onClick={handleAddToReport}
-            className="px-6 py-2 rounded-md bg-purple-700 hover:bg-purple-800 text-white font-medium transition"
+            className="px-6 py-2 rounded-md bg-purple-700 hover:bg-purple-800 text-white"
           >
             Add to report
           </button>
@@ -723,7 +792,6 @@ function ChapterModal({
     </div>
   );
 }
-
 /* -----------------------------------
  * Step 4: Report Style
  * ----------------------------------- */
@@ -736,7 +804,13 @@ function ReportStyleStep({
   setSelectedStyle: (index: number) => void;
   onContinue: () => void;
 }) {
-  const themes = ["/themes/theme1.png", "/themes/theme2.png", "/themes/theme3.png"];
+  const themes = [
+  "https://static.vizru.com/rover/report/template13.jpg",
+  "https://static.vizru.com/rover/report/template9.jpg",
+  "https://static.vizru.com/rover/report/template11.jpg",
+  
+
+];
   return (
     <div>
       <h2 className="text-lg font-semibold mb-6">Report Style</h2>
@@ -788,14 +862,38 @@ function ReportStyleStep({
 function ReviewStep({
   selectedStyle,
   onCreateEbook,
+  onCreateEbookPreview,
 }: {
   selectedStyle: number | null;
   onCreateEbook: () => void;
+  onCreateEbookPreview: () => void;
 }){
-  const themes = ["/themes/theme1.png", "/themes/theme2.png", "/themes/theme3.png"];
+  const themes = ["https://static.vizru.com/rover/report/template13.jpg", "https://static.vizru.com/rover/report/template9.jpg", "https://static.vizru.com/rover/report/template11.jpg"];
+
+  // NEW STATES
+  const [isCreating, setIsCreating] = useState(false);
+  const [buttonText, setButtonText] = useState("Create Report");
+
+  const handleClick = async () => {
+    if (buttonText === "Create Report") {
+      setIsCreating(true);
+      setButtonText("Loading...");
+
+      await onCreateEbook();
+
+      setTimeout(() => {
+        setIsCreating(false);
+        setButtonText("View E-book");
+      }, 3000);
+    } else {
+      await onCreateEbookPreview();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <h2 className="text-lg font-semibold mb-6">Review</h2>
+
       {selectedStyle !== null ? (
         <img
           src={themes[selectedStyle]}
@@ -807,17 +905,147 @@ function ReviewStep({
           No style selected. Please go back to choose a theme.
         </p>
       )}
+
       <h3 className="text-xl font-medium mb-2">Yayyy!</h3>
       <p className="text-zinc-400 mb-6">
         You're all set to create the report.
       </p>
+
       <button
-      onClick={onCreateEbook}
-      className="flex items-center gap-2 px-6 py-2 rounded-xl bg-brand-purple hover:bg-violet-600 text-white font-medium transition-all"
-    >
-      Create Report
-      <ArrowRight size={16} />
-    </button>
+        onClick={handleClick}
+        disabled={isCreating}
+        className={`flex items-center gap-2 px-6 py-2 rounded-xl font-medium transition-all ${
+          isCreating
+            ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+            : "bg-brand-purple hover:bg-violet-600 text-white"
+        }`}
+      >
+        {buttonText}
+        {!isCreating && <ArrowRight size={16} />}
+      </button>
     </div>
   );
 }
+
+function EditorView({
+  content,
+  onBack,
+}: {
+  content: { section: string; content: string }[];
+  onBack: () => void;
+}) {
+  const [sectionsData, setSectionsData] = useState(content);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const reportId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("reportId")
+      : null;
+
+  const handleUpdate = (index: number, value: string) => {
+    const updated = [...sectionsData];
+    updated[index].content = value;
+    setSectionsData(updated);
+  };
+
+  const makePayload = (tag: string) =>
+    JSON.stringify([
+      {
+        ReportID: reportId,  
+        Sections: sectionsData,
+        tag, 
+      },
+    ]);
+
+
+  const handleExportPDF = () => {
+    fetch("/workflow.trigger/roverresearchreportcreatepdf669e5b20c53ee", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: makePayload("pdf"),
+    });
+  };
+
+  const handleExportWord = () => {
+    fetch("/workflow.trigger/roverresearchreportcreatepdf669e5b20c53ee", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: makePayload("docx"),
+    });
+  };
+
+  return (
+    <div className="w-full min-h-screen bg-zinc-900 text-white px-10 py-8">
+
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="mb-6 px-4 py-2 bg-zinc-800 rounded-lg hover:bg-zinc-700"
+      >
+        ← Back
+      </button>
+
+      {/* Header Buttons */}
+      <div className="flex justify-end mb-6 relative">
+        <button
+          onClick={() => setShowDropdown(!showDropdown)}
+          className="px-6 py-2 bg-brand-purple rounded-xl hover:bg-violet-600 shadow-md"
+        >
+          Generate Report ▼
+        </button>
+
+        {showDropdown && (
+          <div className="absolute right-0 mt-2 bg-zinc-800 border border-white/10 rounded-xl shadow-xl w-52 overflow-hidden z-50">
+            <button
+              onClick={handleExportPDF}
+              className="block w-full px-4 py-2 text-left hover:bg-zinc-700"
+            >
+              Export as PDF
+            </button>
+
+            <button
+              onClick={handleExportWord}
+              className="block w-full px-4 py-2 text-left hover:bg-zinc-700"
+            >
+              Export as Word
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Editable Sections */}
+      <div className="space-y-10">
+        {sectionsData.map((sec, index) => (
+          <div
+            key={index}
+            className="bg-zinc-800 border border-white/10 p-6 rounded-2xl shadow-lg"
+          >
+            <h2 className="text-2xl font-bold mb-4 tracking-wide">
+              {sec.section}
+            </h2>
+
+            <div
+              ref={(el) => {
+                if (el && el.innerText !== sectionsData[index].content) {
+                  el.innerText = sectionsData[index].content;
+                }
+              }}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => handleUpdate(index, e.currentTarget.innerText)}
+              className="w-full min-h-[120px] text-[15px] leading-relaxed
+                        p-4 rounded-xl bg-zinc-900 border border-white/10
+                        focus:outline-none focus:ring-2 focus:ring-brand-purple
+                        prose prose-invert"
+              style={{ whiteSpace: "pre-wrap" }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+
+

@@ -16,9 +16,13 @@ module.exports = {
   async rewrites() {
     return [
       {
-        source: '/workflow.trigger/:slug', // Match the pattern in the URL
-        destination: 'https://innov-dev.beta.injomo.com/workflow.trigger/:slug', // Proxy the request to the target URL
+        source: "/workflow.trigger/:slug*",
+        destination: "https://innov-dev.beta.injomo.com/workflow.trigger/:slug*",
       },
+      {
+        source: "/workflow.exec/:slug*",
+        destination: "https://innov-dev.beta.injomo.com/workflow.exec/:slug*",
+      }
     ];
-  },
-}; 
+  }
+};

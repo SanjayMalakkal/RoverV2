@@ -4,19 +4,60 @@ import { Sparkles } from "./Icons";
 import { useRouter } from "next/navigation";
 
 interface Props {
-  onCreate?: () => void;
   selectedProject?: string | null;
   selectedReportType?: string | null;
 }
 
-export default function HeroBanner({ selectedProject, selectedReportType }: Props) {
+export default function HeroBanner({
+  selectedProject,
+  selectedReportType,
+}: Props) {
   const router = useRouter();
 
-  const handleNavigate = () => {
-    const params = new URLSearchParams();
-    if (selectedProject) params.append("project", selectedProject);
-    if (selectedReportType) params.append("reportType", selectedReportType);
-    router.push(`/report-builder?${params.toString()}`);
+  const handleNavigate = async () => {
+    try {
+      // Workflow Payload
+      const payload = [
+        {
+          identifier: "CreateReport",
+          dna_filter_val: "f7cfed46-a054-4538-af43-4c04dbed48a8",
+        },
+      ];
+
+      // Trigger Workflow
+      const resp = await fetch(
+        "/workflow.trigger/createreportsredirection6695103cc4d9d",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const raw = await resp.text();
+      const json = JSON.parse(raw);
+
+      const reportId = json[0]?.ReportID;
+
+      if (!reportId) {
+        console.error("ReportID missing in response:", json);
+        alert("Failed to generate report.");
+        return;
+      }
+
+      // Save ReportID globally
+      localStorage.setItem("reportId", reportId);
+
+      // Redirect to builder
+      const params = new URLSearchParams();
+      if (selectedProject) params.append("project", selectedProject);
+      if (selectedReportType) params.append("reportType", selectedReportType);
+
+      router.push(`/report-builder?${params.toString()}`);
+    } catch (err) {
+      console.error("WF error:", err);
+      alert("Something went wrong while creating the report.");
+    }
   };
 
   return (
