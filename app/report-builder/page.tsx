@@ -26,6 +26,7 @@ function ReportBuilderContent() {
   const searchParams = useSearchParams();
   const project = searchParams.get("project");
   const reportType = searchParams.get("reportType");
+  const [loadedReportId, setLoadedReportId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [authors, setAuthors] = useState("");
   const [description, setDescription] = useState("");
@@ -34,13 +35,16 @@ function ReportBuilderContent() {
   const [showEditor, setShowEditor] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [finalReportId, setFinalReportId] = useState("");
-  const reportId = finalReportId || localStorage.getItem("reportId");
+  // const reportId = finalReportId || localStorage.getItem("reportId");
 
 
   const [activeStep, setActiveStep] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState<number | null>(null);
-  const [modalData, setModalData] = useState<{ section: string; open: boolean }>({
-    section: "",
+  const [modalData, setModalData] = useState<{
+    section: any;
+    open: boolean;
+  }>({
+    section: null,
     open: false,
   });
 
@@ -49,6 +53,16 @@ function ReportBuilderContent() {
       handleReferenceWorkflow();
     }
   }, [activeStep]);
+
+  useEffect(() => {
+  const stored = localStorage.getItem("reportId");
+  if (stored) {
+    setLoadedReportId(stored);
+  }
+}, []);
+
+const reportId = finalReportId || loadedReportId;
+
 
 const handleContinue = async () => {
   try {
@@ -184,36 +198,69 @@ const handleContinue = async () => {
     }
   };
 
-  const handleCreateEbook = async () => {
-    try {
-      const payload = [{}];
+const handleCreateEbook = async () => {
+  try {
+        const payload = [
+      {
+        reportid: reportId,  
+        // projectId: projectId, 
+        // tag: "create"
+      }
+    ];
 
-      const response = await fetch(
-        "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+    const response = await fetch(
+      "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
-      const raw = await response.text();
-      const json = JSON.parse(raw);
+    const raw = await response.text();
+    const json = JSON.parse(raw);
 
-      const newReportId = json[0].ReportID;
+    const newReportId =
+      json[0]?.ReportID ||
+      json[0]?.ReportId ||
+      json[0]?.reportID ||
+      json[0]?.reportId ||
+      json[0]?.reportid;
 
-      setFinalReportId(newReportId);
-      localStorage.setItem("reportId", newReportId);
+    setFinalReportId(newReportId);
+    localStorage.setItem("reportId", newReportId);
 
-    } catch (err) {
-      console.error("Create Ebook Error:", err);
-      alert("Failed to create ebook.");
-    }
-  };
+    setFinalReportId(newReportId);
+    localStorage.setItem("reportId", newReportId);
+
+    localStorage.removeItem("sectionIds");
+    window.dispatchEvent(new Event("reset-section-ids"));
+
+  } catch (err) {
+    console.error("Create Ebook Error:", err);
+    alert("Failed to create ebook.");
+  }
+};
+
 
 const onCreateEbookPreview = async () => {
   try {
-    const payload = [{ ReportID: finalReportId }];
+    // ✅ Use correct ReportID
+    const reportId = finalReportId || loadedReportId;
+
+    if (!reportId) {
+      console.error("Preview Error: No reportId available", {
+        finalReportId,
+        loadedReportId,
+      });
+      return;
+    }
+
+    const payload = [
+      {
+        ReportID: reportId,
+      },
+    ];
 
     const response = await fetch(
       "/workflow.trigger/sanjaytest66ed4729d7a7e",
@@ -225,17 +272,13 @@ const onCreateEbookPreview = async () => {
     );
 
     const raw = await response.text();
-    console.log("Preview raw:", raw);
-
     const json = JSON.parse(raw);
 
-    // REAL SECTION DATA IS INSIDE "Data"
-    const sectionsArray = JSON.parse(json[0].Data);
+    const sectionsArray = JSON.parse(json[0].Data || "[]");
 
-    // CLEAN HTML → PLAIN TEXT
     const cleanedSections = sectionsArray.map((item) => ({
       section: item.Sections,
-      content: item.Content.replace(/<[^>]+>/g, "").trim(), // strip HTML
+      content: (item.Content || "").replace(/<[^>]+>/g, "").trim(),
     }));
 
     setEditorContent(cleanedSections);
@@ -245,6 +288,8 @@ const onCreateEbookPreview = async () => {
     console.error("Preview workflow failed", e);
   }
 };
+
+
 
 
 if (showEditor) {
@@ -498,24 +543,113 @@ function SectionsStep({
   onContinue: () => void;
   setModalData: (data: { section: string; open: boolean }) => void;
 }) {
-  const allSections = [
-    "Executive Summary",
-    "Introduction",
-    "Market Overview",
-    "Findings and Analysis",
-    "Competitive Landscape",
-    "Opportunities and Challenges",
-    "Conclusion",
-  ];
-  const [visibleSections, setVisibleSections] = useState<string[]>([
-    allSections[0],
-  ]);
+
+
+const allSections = [
+  { id: "b8f3c2f1-3c1a-4c1f-bc32-2db8d911e342", name: "Executive Summary" },
+  { id: "19cfe1b3-2c34-458e-862e-8134cb1a05a9", name: "Introduction" },
+  { id: "2c7b4adb-6e11-4c03-b5c4-011d5e67b55f", name: "Market Overview" },
+  { id: "3df7e9a8-9e0b-4e49-a1c1-6e6d52e3ac08", name: "Findings and Analysis" },
+  { id: "fc6fa09b-f749-4462-966b-efdd69ef3821", name: "Competitive Landscape" },
+  { id: "e11a9edc-9f2e-4e08-bb4b-60b2d81e2e1f", name: "Opportunities and Challenges" },
+  { id: "a24f8070-a18e-41c8-beb7-671478e6f248", name: "Conclusion" },
+];
+
+const [sectionIds, setSectionIds] = useState({});
+
+useEffect(() => {
+  // Load from localStorage on mount
+  const saved = localStorage.getItem("sectionIds");
+  if (saved) setSectionIds(JSON.parse(saved));
+
+  // Listen for reset event from parent
+  const clearIds = () => setSectionIds({});
+  window.addEventListener("reset-section-ids", clearIds);
+
+  return () => window.removeEventListener("reset-section-ids", clearIds);
+}, []);
+
+
+const [visibleSections, setVisibleSections] = useState([allSections[0]]);
 
   const handleAddSection = () => {
     if (visibleSections.length < allSections.length) {
       setVisibleSections(allSections.slice(0, visibleSections.length + 1));
     }
   };
+
+  const globalReportId =
+  typeof window !== "undefined" ? localStorage.getItem("reportId") : null;
+
+  useEffect(() => {
+  const currentReport = localStorage.getItem("reportId");
+  const lastReport = localStorage.getItem("lastReportId");
+
+  if (currentReport !== lastReport) {
+    // new report created
+    setSectionIds({});
+    localStorage.setItem("sectionIds", JSON.stringify({}));
+    localStorage.setItem("lastReportId", currentReport);
+  }
+}, [globalReportId]);
+
+const projectId = typeof window !== "undefined"
+  ? new URLSearchParams(window.location.search).get("project")
+  : null;
+
+const handleSectionClick = async (section: { id: string; name: string }) => {
+  try {
+    const hasSavedId = sectionIds[section.name];
+
+    const payload = [
+      {
+        ReportId: globalReportId,
+        ProjectId: projectId,
+        tag: hasSavedId ? "edit" : "new",
+        ...(hasSavedId ? { sectionId: hasSavedId } : {})
+      }
+    ];
+
+    // call workflow
+    const response = await fetch(
+      "/workflow.trigger/roverresearchreportsectionpopup66b9d41f6a159",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const raw = await response.text();
+    const json = JSON.parse(raw);
+
+    const workflowSection = json[0];
+
+    // if NEW, store the generated SectionID
+    if (workflowSection.tag === "new" && workflowSection.SectionID) {
+      setSectionIds((prev) => {
+        const updated = { ...prev, [section.name]: workflowSection.SectionID };
+        localStorage.setItem("sectionIds", JSON.stringify(updated));
+        return updated;
+      });
+    }
+
+    setModalData({
+      section: {
+        ...section,
+        id: hasSavedId || workflowSection.SectionID, // dynamic
+        content: workflowSection.Content || "",
+        prompt: workflowSection.Prompt || "",
+      },
+      open: true,
+    });
+
+  } catch (err) {
+    console.error("Section popup error:", err);
+  }
+};
+
+
 
   const allVisible = visibleSections.length === allSections.length;
 
@@ -530,11 +664,11 @@ function SectionsStep({
       <div className="flex flex-col gap-3 relative overflow-visible">
         {visibleSections.map((section) => (
           <button
-            key={section}
-            onClick={() => setModalData({ section, open: true })}
+            key={section.id}
+            onClick={() => handleSectionClick(section)}
             className="flex items-center justify-between p-3 rounded-xl bg-zinc-800 border border-white/10 hover:bg-zinc-700 transition-all"
           >
-            <span>{section}</span>
+            <span>{section.name}</span>
           </button>
         ))}
 
@@ -570,13 +704,13 @@ function ChapterModal({
   section,
   onClose,
 }: {
-  section: string;
+  section: { id: string; name: string; content?: string; prompt?: string };
   onClose: () => void;
 }) {
-  const [textareaValue, setTextareaValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [generatedText, setGeneratedText] = useState("");
-  const [hideSuggestions, setHideSuggestions] = useState(false);
+  const [generatedText, setGeneratedText] = useState(section.content || "");
+  const [hideSuggestions, setHideSuggestions] = useState(!!section.content);
+  const [textareaValue, setTextareaValue] = useState(section.prompt || "");
   const globalReportId =
   typeof window !== "undefined"
     ? localStorage.getItem("reportId")
@@ -589,10 +723,10 @@ function ChapterModal({
   const [jobIdValue, setJobIdValue] = useState("");
 
   const suggestions = [
-    `Write a ${section} that provides a clear overview of the topic and incorporates the significant findings from the research.`,
-    `Write a ${section} chapter that provides an overview of the topic and incorporates a brief summary of the key findings from the study.`,
-    `Write a ${section} that focuses on summarizing the key findings succinctly and setting the stage for the detailed analysis that follows.`,
-    `Write a ${section} paragraph that presents the research focus and includes a summary of the important conclusions from the study.`,
+    `Write a ${section.name} that provides a clear overview of the topic and incorporates the significant findings from the research.`,
+    `Write a ${section.name} chapter that provides an overview of the topic and incorporates a brief summary of the key findings from the study.`,
+    `Write a ${section.name} that focuses on summarizing the key findings succinctly and setting the stage for the detailed analysis that follows.`,
+    `Write a ${section.name} paragraph that presents the research focus and includes a summary of the important conclusions from the study.`,
   ];
 
   const handleTryNow = async () => {
@@ -606,11 +740,12 @@ function ChapterModal({
         {
           workflow: "TryItNowButton",
           step: "chapter-generate",
-          section,
-          prompt: textareaValue,
+          section: section.name,
+          sectionID: section.id,
+          promt: textareaValue,
           ReportID: globalReportId,
-          sectionID: "5dbf1989-ff49-46d4-84b6-4e70fc0f014c",
-          tag: "edit",
+          // sectionID: "5dbf1989-ff49-46d4-84b6-4e70fc0f014c",
+          tag: section.id ? "edit" : "new",
         },
       ];
 
@@ -670,8 +805,8 @@ function ChapterModal({
 
         promt: textareaValue, 
 
-        sectionID: sectionId,
-        title: section,
+        sectionID: section.id,
+        title: section.name,
         tag: "edit",
 
         jobid: jobIdValue,
@@ -697,11 +832,12 @@ function ChapterModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-zinc-900 text-zinc-100 rounded-xl shadow-2xl w-[95%] max-w-3xl min-h-[70vh] flex flex-col border border-white/10 animate-scaleIn"
+        className="bg-zinc-900 text-zinc-100 rounded-xl shadow-2xl 
+        w-full max-w-3xl max-h-[90vh] flex flex-col border border-white/10 animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -713,10 +849,10 @@ function ChapterModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
           <input
             type="text"
-            value={section}
+            value={section.name}
             readOnly
             className="w-full p-3 rounded-md bg-zinc-800 border border-white/10"
           />
@@ -727,7 +863,7 @@ function ChapterModal({
               rows={3}
               value={textareaValue}
               onChange={(e) => setTextareaValue(e.target.value)}
-              placeholder={`Provide an overview for ${section.toLowerCase()}...`}
+              placeholder={`Provide an overview for ${section.name.toLowerCase()}...`}
               className="flex-1 p-3 rounded-md bg-zinc-800 border border-white/10"
             />
 
@@ -780,7 +916,7 @@ function ChapterModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end">
+        <div className="p-4 border-t border-white/10 bg-zinc-950 flex justify-end shrink-0">
           <button
             onClick={handleAddToReport}
             className="px-6 py-2 rounded-md bg-purple-700 hover:bg-purple-800 text-white"
