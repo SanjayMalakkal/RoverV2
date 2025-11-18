@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { Check, ArrowRight, X, Workflow } from "lucide-react";
 import { title } from "process";
+import { APP_CONFIG } from "@/app/config";
 
+const url = `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.PROJECT_LIST_WF}`
 const steps = [
   "Report Info",
   "Sections",
@@ -23,6 +25,7 @@ export default function ReportBuilderPage() {
 }
 
 function ReportBuilderContent() {
+  
   const searchParams = useSearchParams();
   const project = searchParams.get("project");
   const reportType = searchParams.get("reportType");
@@ -33,7 +36,10 @@ function ReportBuilderContent() {
   const [prompt, setprompt] = useState("");
   const [references, setReferences] = useState([]);
   const [showEditor, setShowEditor] = useState(false);
-  const [editorContent, setEditorContent] = useState("");
+  const [editorContent, setEditorContent] = useState<
+  { section: string; content: string }[]
+  >([]);
+
   const [finalReportId, setFinalReportId] = useState("");
   // const reportId = finalReportId || localStorage.getItem("reportId");
 
@@ -146,7 +152,7 @@ const handleContinue = async () => {
     }
 
     // CALL THE WORKFLOW
-    const response = await fetch(`/workflow.trigger/${workflowId}`, {
+    const response = await fetch(`${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}${workflowId}`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -177,7 +183,7 @@ const handleContinue = async () => {
       ];
 
       const response = await fetch(
-        "/workflow.trigger/roverresearchreportdatafetch669f4eca89979",
+        `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportdatafetch669f4eca89979`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -209,7 +215,7 @@ const handleCreateEbook = async () => {
     ];
 
     const response = await fetch(
-      "/workflow.trigger/roverresearchreportredirecttopreview66c45d7168478",
+      `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportredirecttopreview66c45d7168478`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,7 +251,7 @@ const handleCreateEbook = async () => {
 
 const onCreateEbookPreview = async () => {
   try {
-    // ✅ Use correct ReportID
+
     const reportId = finalReportId || loadedReportId;
 
     if (!reportId) {
@@ -263,7 +269,7 @@ const onCreateEbookPreview = async () => {
     ];
 
     const response = await fetch(
-      "/workflow.trigger/sanjaytest66ed4729d7a7e",
+      `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}sanjaytest66ed4729d7a7e`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -276,10 +282,17 @@ const onCreateEbookPreview = async () => {
 
     const sectionsArray = JSON.parse(json[0].Data || "[]");
 
-    const cleanedSections = sectionsArray.map((item) => ({
-      section: item.Sections,
-      content: (item.Content || "").replace(/<[^>]+>/g, "").trim(),
-    }));
+    type SectionItem = {
+      Sections: string;
+      Content: string;
+    };
+
+    const cleanedSections = (sectionsArray as SectionItem[]).map(
+      (item: SectionItem) => ({
+        section: item.Sections,
+        content: (item.Content || "").replace(/<[^>]+>/g, "").trim(),
+      })
+    );
 
     setEditorContent(cleanedSections);
     setShowEditor(true);
@@ -414,7 +427,7 @@ function StepContent({
   onContinue: () => void;
   selectedStyle: number | null;
   setSelectedStyle: (index: number) => void;
-  setModalData: (data: { section: string; open: boolean }) => void;
+  setModalData: (data: { section: any; open: boolean }) => void;
   title: string;
   setTitle: (v: string) => void;
   description: string;
@@ -541,7 +554,7 @@ function SectionsStep({
   setModalData,
 }: {
   onContinue: () => void;
-  setModalData: (data: { section: string; open: boolean }) => void;
+  setModalData: (data: { section: any; open: boolean }) => void;
 }) {
 
 
@@ -555,7 +568,7 @@ const allSections = [
   { id: "a24f8070-a18e-41c8-beb7-671478e6f248", name: "Conclusion" },
 ];
 
-const [sectionIds, setSectionIds] = useState({});
+const [sectionIds, setSectionIds] = useState<Record<string, string>>({});
 
 useEffect(() => {
   // Load from localStorage on mount
@@ -589,7 +602,7 @@ const [visibleSections, setVisibleSections] = useState([allSections[0]]);
     // new report created
     setSectionIds({});
     localStorage.setItem("sectionIds", JSON.stringify({}));
-    localStorage.setItem("lastReportId", currentReport);
+    localStorage.setItem("lastReportId", currentReport ?? "");
   }
 }, [globalReportId]);
 
@@ -612,7 +625,7 @@ const handleSectionClick = async (section: { id: string; name: string }) => {
 
     // call workflow
     const response = await fetch(
-      "/workflow.trigger/roverresearchreportsectionpopup66b9d41f6a159",
+      `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportsectionpopup66b9d41f6a159`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -750,7 +763,7 @@ function ChapterModal({
       ];
 
       const genResponse = await fetch(
-        "/workflow.trigger/roverresearchreportreportgenerate66a10d164c6ad",
+        `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportreportgenerate66a10d164c6ad`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -776,7 +789,7 @@ function ChapterModal({
       ];
 
       const contentResp = await fetch(
-        "/workflow.trigger/roverresearchreportshowcontent670668ab24679",
+        `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportshowcontent670668ab24679`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -815,7 +828,7 @@ function ChapterModal({
 
     try {
       await fetch(
-        "/workflow.trigger/roverresearchreportsavesection66ba04fb7222c",
+        `${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportsavesection66ba04fb7222c`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1095,7 +1108,7 @@ function EditorView({
 
 
   const handleExportPDF = () => {
-    fetch("/workflow.trigger/roverresearchreportcreatepdf669e5b20c53ee", {
+    fetch(`${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportcreatepdf669e5b20c53ee`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: makePayload("pdf"),
@@ -1103,7 +1116,7 @@ function EditorView({
   };
 
   const handleExportWord = () => {
-    fetch("/workflow.trigger/roverresearchreportcreatepdf669e5b20c53ee", {
+    fetch(`${APP_CONFIG.PUBLIC_API_URL}${APP_CONFIG.WORKFLOW_EXEC}roverresearchreportcreatepdf669e5b20c53ee`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: makePayload("docx"),
